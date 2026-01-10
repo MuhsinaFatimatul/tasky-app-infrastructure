@@ -1,0 +1,8 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: tasky-config
+  namespace: tasky-app
+data:
+  PORT: "3000"
+  # MongoDB URI should be set via environment-specific values

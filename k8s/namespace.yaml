@@ -1,0 +1,7 @@
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: tasky-app
+  labels:
+    name: tasky-app
+    environment: production
