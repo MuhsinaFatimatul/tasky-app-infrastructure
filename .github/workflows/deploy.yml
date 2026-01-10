@@ -21,6 +21,9 @@ jobs:
     runs-on: ubuntu-latest
     env:
       AWS_REGION: ${{ secrets.AWS_REGION }}
+    defaults:
+      run:
+        working-directory: ./wiz
     steps:
       - uses: actions/checkout@v3
 
@@ -50,7 +53,7 @@ jobs:
         id: checkov
         uses: bridgecrewio/checkov-action@v12
         with:
-          directory: .
+          directory: ./wiz
           soft_fail: true
           framework: terraform
 
@@ -112,6 +115,9 @@ ${process.env.PLAN}
     runs-on: ubuntu-latest
     env:
       AWS_REGION: ${{ secrets.AWS_REGION }}
+    defaults:
+      run:
+        working-directory: ./wiz
     steps:
       - name: Checkout Repository
         uses: actions/checkout@v3
