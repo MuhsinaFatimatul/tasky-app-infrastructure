@@ -5,7 +5,7 @@
 # Populate ~/.kube/config so kubectl targets the EKS cluster
 aws eks update-kubeconfig --region <AWS_REGION> --name <EKS_CLUSTER_NAME>```
 
-## Login to ACR
+## Login to ECR
 
 # Get AWS account ID (used to form registry hostname)
 AWS_ACCOUNT_ID=$(aws sts get-caller-identity --query Account --output text)
