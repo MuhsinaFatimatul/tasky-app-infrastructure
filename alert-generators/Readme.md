@@ -3,7 +3,8 @@
 ## Get AWS Credentials
 
 # Populate ~/.kube/config so kubectl targets the EKS cluster
-aws eks update-kubeconfig --region <AWS_REGION> --name <EKS_CLUSTER_NAME>```
+aws eks update-kubeconfig --region <AWS_REGION> --name <EKS_CLUSTER_NAME>
+```
 
 ## Login to ECR
 
