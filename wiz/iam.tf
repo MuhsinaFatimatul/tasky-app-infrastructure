@@ -59,7 +59,7 @@ resource "aws_iam_role_policy" "cloudwatch_policy" {
           "logs:PutLogEvents",
           "logs:DescribeLogStreams"
         ]
-        Resource = "arn:aws:logs:*:*:*"
+        Resource = "arn:aws:logs:${var.region}:${data.aws_caller_identity.current.account_id}:log-group:/aws/ec2/mongodb*"
       }
     ]
   })
