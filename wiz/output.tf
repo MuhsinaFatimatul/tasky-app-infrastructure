@@ -48,3 +48,13 @@ output "iam_instance_profile" {
 output "eks_cluster_name" {
   value = module.eks.cluster_name
 }
+
+output "mongodb_public_ip" {
+  value       = aws_instance.mongodb.public_ip
+  description = "Public IP address of the MongoDB EC2 instance"
+}
+
+output "mongodb_private_ip" {
+  value       = aws_instance.mongodb.private_ip
+  description = "Private IP address of the MongoDB EC2 instance"
+}
