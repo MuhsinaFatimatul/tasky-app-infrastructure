@@ -135,7 +135,7 @@ jobs:
         run: terraform init
 
       - name: Terraform Apply (Auto-Approve)
-        run: terraform apply -auto-approve
+        run: terraform apply -lock=false -auto-approve
 
       - name: Configure kubectl
         run: |
