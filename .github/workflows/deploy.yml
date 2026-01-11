@@ -10,7 +10,7 @@ on:
       - main
     paths-ignore:
       - 'alert-generators/**'
-
+ 
 permissions:
   contents: read
   issues: write
