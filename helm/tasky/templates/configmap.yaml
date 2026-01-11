@@ -1,9 +1,0 @@
-apiVersion: v1
-kind: ConfigMap
-metadata:
-  name: {{ include "tasky.fullname" . }}-config
-  namespace: {{ .Values.environment }}
-  labels:
-    {{- include "tasky.labels" . | nindent 4 }}
-data:
-  PORT: {{ .Values.config.port | quote }}
