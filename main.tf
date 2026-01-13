@@ -9,7 +9,6 @@ terraform {
     bucket         = "demo-terraform-state-bucket-1"
     key            = "terraform.tfstate"
     region         = "us-east-1"
-    dynamodb_table = "terraform-locks"
     encrypt        = true
   }
 
@@ -59,44 +58,127 @@ module "vpc" {
 }
 
 ########################################
-# EKS CLUSTER + NODE GROUPS
+# EKS CLUSTER 
 ########################################
 
-module "eks" {
-  source  = "terraform-aws-modules/eks/aws"
-  version = "20.8.4"
+# IAM role for EKS cluster
+resource "aws_iam_role" "eks_cluster" {
+  name = "demo-eks-cluster-role"
 
-  cluster_name    = "demo-eks"
-  cluster_version = "1.29"
+  assume_role_policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = [{
+      Action = "sts:AssumeRole"
+      Effect = "Allow"
+      Principal = {
+        Service = "eks.amazonaws.com"
+      }
+    }]
+  })
 
-  vpc_id     = module.vpc.vpc_id
-  subnet_ids = module.vpc.private_subnets
+  tags = {
+    Environment = "Production"
+  }
+}
 
-  # Hybrid access: public for CI/CD, private for nodes
-  cluster_endpoint_private_access = true
-  cluster_endpoint_public_access  = true
+resource "aws_iam_role_policy_attachment" "eks_cluster_policy" {
+  policy_arn = "arn:aws:iam::aws:policy/AmazonEKSClusterPolicy"
+  role       = aws_iam_role.eks_cluster.name
+}
 
-  enable_irsa = true
+# EKS Cluster
+resource "aws_eks_cluster" "main" {
+  name     = "demo-eks"
+  role_arn = aws_iam_role.eks_cluster.arn
+  version  = "1.32"
 
-  eks_managed_node_groups = {
-    system = {
-      name           = "system-ng"
-      instance_types = ["t3.medium"]
-      min_size       = 2
-      max_size       = 3
-      desired_size   = 2
-    }
+  vpc_config {
+    subnet_ids = module.vpc.private_subnets
+  }
 
-    user = {
-      name           = "user-ng"
-      instance_types = ["t3.medium"]
-      desired_size   = 1
-    }
+  enabled_cluster_log_types = ["api", "audit", "authenticator"]
+
+  tags = {
+    Environment = "Production"
+  }
+
+  depends_on = [aws_iam_role_policy_attachment.eks_cluster_policy]
+}
+
+# OIDC Provider for IRSA
+data "tls_certificate" "eks" {
+  url = aws_eks_cluster.main.identity[0].oidc[0].issuer
+}
+
+resource "aws_iam_openid_connect_provider" "eks" {
+  client_id_list  = ["sts.amazonaws.com"]
+  thumbprint_list = [data.tls_certificate.eks.certificates[0].sha1_fingerprint]
+  url             = aws_eks_cluster.main.identity[0].oidc[0].issuer
+
+  tags = {
+    Environment = "Production"
+  }
+}
+
+# IAM role for node groups
+resource "aws_iam_role" "eks_nodes" {
+  name = "demo-eks-node-role"
+
+  assume_role_policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = [{
+      Action = "sts:AssumeRole"
+      Effect = "Allow"
+      Principal = {
+        Service = "ec2.amazonaws.com"
+      }
+    }]
+  })
+
+  tags = {
+    Environment = "Production"
+  }
+}
+
+resource "aws_iam_role_policy_attachment" "eks_node_policy" {
+  policy_arn = "arn:aws:iam::aws:policy/AmazonEKSWorkerNodePolicy"
+  role       = aws_iam_role.eks_nodes.name
+}
+
+resource "aws_iam_role_policy_attachment" "eks_cni_policy" {
+  policy_arn = "arn:aws:iam::aws:policy/AmazonEKS_CNI_Policy"
+  role       = aws_iam_role.eks_nodes.name
+}
+
+resource "aws_iam_role_policy_attachment" "eks_ecr_policy" {
+  policy_arn = "arn:aws:iam::aws:policy/AmazonEC2ContainerRegistryReadOnly"
+  role       = aws_iam_role.eks_nodes.name
+}
+
+# Node Group
+resource "aws_eks_node_group" "main" {
+  cluster_name    = aws_eks_cluster.main.name
+  node_group_name = "demo-eks-nodes"
+  node_role_arn   = aws_iam_role.eks_nodes.arn
+  subnet_ids      = module.vpc.private_subnets
+
+  instance_types = ["t3.medium"]
+
+  scaling_config {
+    desired_size = 2
+    max_size     = 3
+    min_size     = 1
   }
 
   tags = {
     Environment = "Production"
   }
+
+  depends_on = [
+    aws_iam_role_policy_attachment.eks_node_policy,
+    aws_iam_role_policy_attachment.eks_cni_policy,
+    aws_iam_role_policy_attachment.eks_ecr_policy
+  ]
 }
 
 ########################################
@@ -113,12 +195,12 @@ resource "aws_cloudwatch_log_group" "eks" {
 ########################################
 
 resource "aws_eks_addon" "vpc_cni" {
-  cluster_name = module.eks.cluster_name
+  cluster_name = aws_eks_cluster.main.name
   addon_name   = "vpc-cni"
 }
 
 resource "aws_eks_addon" "cloudwatch" {
-  cluster_name = module.eks.cluster_name
+  cluster_name = aws_eks_cluster.main.name
   addon_name   = "amazon-cloudwatch-observability"
 }
 

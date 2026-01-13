@@ -1,14 +1,14 @@
 
 output "cluster_name" {
-  value = module.eks.cluster_name
+  value = aws_eks_cluster.main.name
 }
 
 output "cluster_endpoint" {
-  value = module.eks.cluster_endpoint
+  value = aws_eks_cluster.main.endpoint
 }
 
 output "cluster_oidc_issuer" {
-  value = module.eks.cluster_oidc_issuer_url
+  value = aws_eks_cluster.main.identity[0].oidc[0].issuer
 }
 
 output "ecr_repository_url" {
@@ -46,7 +46,7 @@ output "iam_instance_profile" {
 }
 
 output "eks_cluster_name" {
-  value = module.eks.cluster_name
+  value = aws_eks_cluster.main.name
 }
 
 output "mongodb_public_ip" {
@@ -70,7 +70,7 @@ output "app_deployment_info" {
     ecr_repo           = aws_ecr_repository.app.repository_url
     mongodb_ip         = aws_instance.mongodb.private_ip
     mongodb_connection = "mongodb://${aws_instance.mongodb.private_ip}:27017"
-    cluster_name       = module.eks.cluster_name
+    cluster_name       = aws_eks_cluster.main.name
     aws_region         = var.region
   }
   description = "Key values for app deployment"
