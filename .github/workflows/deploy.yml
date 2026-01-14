@@ -142,3 +142,16 @@ jobs:
 
       - name: Terraform Apply (Auto-Approve)
         run: terraform apply -auto-approve
+
+      - name: Configure kubectl
+        run: |
+          aws eks update-kubeconfig --name demo-eks --region ${{ env.AWS_REGION }}
+
+      - name: Install NGINX Ingress Controller
+        run: |
+          kubectl apply -f https://raw.githubusercontent.com/kubernetes/ingress-nginx/controller-v1.12.2/deploy/static/provider/aws/deploy.yaml
+          echo "Waiting for NGINX Ingress Controller to be ready..."
+          kubectl wait --namespace ingress-nginx \
+            --for=condition=ready pod \
+            --selector=app.kubernetes.io/component=controller \
+            --timeout=300s
